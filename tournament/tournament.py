@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-# 
+#
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
 import psycopg2
+
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
@@ -80,7 +81,8 @@ def getWinnerCount(player_id):
     """
     db = connect()
     db_curs = db.cursor()
-    db_curs.execute("SELECT count(*) FROM matches WHERE winner = (%s)", (player_id,))
+    db_curs.execute(
+        "SELECT count(*) FROM matches WHERE winner = (%s)", (player_id,))
     winner_result = db_curs.fetchone()
     db.close()
     return winner_result[0]
@@ -95,7 +97,8 @@ def getLoserCount(player_id):
     """
     db = connect()
     db_curs = db.cursor()
-    db_curs.execute("SELECT count(*) FROM matches WHERE loser = (%s)", (player_id,))
+    db_curs.execute(
+        "SELECT count(*) FROM matches WHERE loser = (%s)", (player_id,))
     loser_result = db_curs.fetchone()
     db.close()
     return loser_result[0]
@@ -110,7 +113,8 @@ def reportMatch(winner, loser):
     """
     db = connect()
     db_curs = db.cursor()
-    db_curs.execute("INSERT INTO matches(winner,loser) VALUES(%s,%s)",  (winner,loser,))
+    db_curs.execute(
+        "INSERT INTO matches(winner,loser) VALUES(%s,%s)",  (winner, loser,))
     db.commit()
     db.close()
 
@@ -150,7 +154,8 @@ def getAllIdsFromPlayersInAList():
 def getAllIdsFromViewWinTotalInAList():
     """Returns list of player ids
     Returns:
-        id_list: return list ids of all winners using view based on players and matches tables
+        id_list: return list ids of all winners using view
+        based on players and matches tables
     """
     db = connect()
     db_curs = db.cursor()
@@ -167,8 +172,8 @@ def getAllIdsFromViewWinTotalInAList():
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
 
-    The first entry in the list should be the player in first place, or a player
-    tied for first place if there is currently a tie.
+    The first entry in the list should be the player in first place,
+    or a player tied for first place if there is currently a tie.
 
     Returns:
       A list of tuples, each of which contains (id, name, wins, matches):
@@ -180,7 +185,8 @@ def playerStandings():
     # check if there are records in matches table
     match_count = countMatches()
     if match_count == 0:
-        # execute query to return id, name, winner set to 0 and total matches set to 0
+        # execute query to return id, name, winner set to 0
+        # and total matches set to 0
         db = connect()
         db_curs = db.cursor()
         qry = "SELECT players.id, name," \
@@ -212,7 +218,10 @@ def playerStandings():
                 lose_count = getLoserCount(player_id)
                 row_list.append(player_id)
                 row_list.append(row[1])
-                row_list.append(row[2])
+                if win_count > 0:
+                    row_list.append(1)
+                else:
+                    row_list.append(0)
                 row_list.append(win_count + lose_count)
                 all_winners.append(row_list)
             return all_winners
@@ -222,12 +231,12 @@ def playerStandings():
 
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
-  
+
     Assuming that there are an even number of players registered, each player
     appears exactly once in the pairings.  Each player is paired with another
     player with an equal or nearly-equal win record, that is, a player adjacent
     to him or her in the standings.
-  
+
     Returns:
       A list of tuples, each of which contains (id1, name1, id2, name2)
         id1: the first player's unique id
@@ -242,22 +251,24 @@ def swissPairings():
         all_id_list = getAllIdsFromPlayersInAList()
         if all_id_list:
             id_pair_list = []
-            for index in range (len(all_id_list)):
-                if index%2 == 0:
+            for index in range(len(all_id_list)):
+                if index % 2 == 0:
                     tup = (all_id_list[index], all_id_list[index+1])
                     id_pair_list.append(tup)
             return id_pair_list
         else:
             return []
     else:
-        # logic to get list of tuples, each of which contains (id1, name1, id2, name2)
+        # logic to get list of tuples, each of which contains
+        # (id1, name1, id2, name2)
         # get list of all players id from players table
         all_id_list = getAllIdsFromPlayersInAList()
 
         # get list of all winner id from view_win_total
         all_winner_id_list = getAllIdsFromViewWinTotalInAList()
 
-        # create list of winners sorted by wins and append with id who have not won a single match
+        # create list of winners sorted by wins and append with id
+        # who have not won a single match
         all_won_or_lost_list = []
         for val in all_winner_id_list:
             all_won_or_lost_list.append(val)
@@ -267,14 +278,15 @@ def swissPairings():
             else:
                 all_won_or_lost_list.append(val)
 
-        #now create the tuple list using player id and player name
+        # now create the tuple list using player id and player name
         pair_list = []
         for index in range(len(all_won_or_lost_list)):
             if index % 2 == 0:
                 player_one_id = all_won_or_lost_list[index]
                 player_two_id = all_won_or_lost_list[index+1]
                 player_one_name = getPlayerNameFromPlayers(player_one_id)
-                player_two_name =  getPlayerNameFromPlayers(player_two_id)
-                pair_tuple = (player_one_id, player_one_name, player_two_id, player_two_name)
+                player_two_name = getPlayerNameFromPlayers(player_two_id)
+                pair_tuple = (player_one_id, player_one_name,
+                              player_two_id, player_two_name)
                 pair_list.append(pair_tuple)
         return pair_list
