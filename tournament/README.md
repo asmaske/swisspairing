@@ -33,9 +33,7 @@ The project uses the following software:
 + Execute command **vagrant ssh** to start the shell
 + cd to **/vagrant/tournament** directory
 + Execute **psql**
-	- create database **tournament**
-	- connect to database **tournament** using command **\c tournament**
-	- execute command **\i tournament.sql** to create tables and view
+	- execute command **\i tournament.sql** to create database, tables and view
 	- exit from **psql**
 + Execute python program **python tournament_test.py**
 + On successful execution similar output should be displayed (NOTE: ids will be different):

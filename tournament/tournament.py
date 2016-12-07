@@ -6,39 +6,47 @@
 import psycopg2
 
 
-def connect():
-    """Connect to the PostgreSQL database.  Returns a database connection."""
-    return psycopg2.connect("dbname=tournament")
+def connect(database_name="tournament"):
+    try:
+        db = psycopg2.connect("dbname={}".format(database_name))
+        cursor = db.cursor()
+        return db, cursor
+    except:
+        print("<error message>")
 
 
 def deleteMatches():
     """Remove all the records from matches table"""
-    db = connect()
-    db_curs = db.cursor()
-    qry = "DELETE FROM matches"
-    db_curs.execute(qry)
+    db, cursor = connect()
+
+    query = "TRUNCATE matches;"
+    cursor.execute(query)
+
     db.commit()
     db.close()
 
 
 def deletePlayers():
     """Remove all the records from players table"""
-    db = connect()
-    db_curs = db.cursor()
-    qry = "DELETE FROM players"
-    db_curs.execute(qry)
+    db, cursor = connect()
+
+    query = "TRUNCATE players CASCADE;"
+    cursor.execute(query)
+
     db.commit()
     db.close()
 
 
 def countPlayers():
     """Returns the number of players currently registered."""
-    db = connect()
-    db_curs = db.cursor()
-    qry = "SELECT count(id) AS num FROM players"
-    db_curs.execute(qry)
-    results = db_curs.fetchone()
+    db, cursor = connect()
+
+    query = "SELECT count(id) AS num FROM players;"
+    cursor.execute(query)
+    results = cursor.fetchone()
+
     db.close()
+
     if results:
         return results[0]
     else:
@@ -47,12 +55,14 @@ def countPlayers():
 
 def countMatches():
     """Returns the number of matches played."""
-    db = connect()
-    db_curs = db.cursor()
-    qry = "SELECT count(*) AS num FROM matches"
-    db_curs.execute(qry)
-    results = db_curs.fetchone()
+    db, cursor = connect()
+
+    query = "SELECT count(id) AS num FROM matches;"
+    cursor.execute(query)
+    results = cursor.fetchone()
+
     db.close()
+
     if results:
         return results[0]
     else:
@@ -65,9 +75,12 @@ def registerPlayer(name):
     Args:
       name: the player's full name
     """
-    db = connect()
-    db_curs = db.cursor()
-    db_curs.execute("INSERT INTO players(name) VALUES(%s)", (name,))
+    db, cursor = connect()
+
+    query = "INSERT INTO players (name) VALUES (%s);"
+    parameter = (name,)
+    cursor.execute(query, parameter)
+
     db.commit()
     db.close()
 
@@ -79,12 +92,15 @@ def getWinnerCount(player_id):
     Returns:
         wins: the number of matches the player has won
     """
-    db = connect()
-    db_curs = db.cursor()
-    db_curs.execute(
-        "SELECT count(*) FROM matches WHERE winner = (%s)", (player_id,))
-    winner_result = db_curs.fetchone()
+    db, cursor = connect()
+
+    query = "SELECT count(*) FROM matches WHERE winner = (%s);"
+    parameter = (player_id,)
+    cursor.execute(query, parameter)
+    winner_result = cursor.fetchone()
+
     db.close()
+
     return winner_result[0]
 
 
@@ -95,12 +111,15 @@ def getLoserCount(player_id):
     Returns:
         loses: the number of matches the player has lost
     """
-    db = connect()
-    db_curs = db.cursor()
-    db_curs.execute(
-        "SELECT count(*) FROM matches WHERE loser = (%s)", (player_id,))
-    loser_result = db_curs.fetchone()
+    db, cursor = connect()
+
+    query = "SELECT count(*) FROM matches WHERE loser = (%s);"
+    parameter = (player_id,)
+    cursor.execute(query, parameter)
+    loser_result = cursor.fetchone()
+
     db.close()
+
     return loser_result[0]
 
 
@@ -111,10 +130,12 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
-    db = connect()
-    db_curs = db.cursor()
-    db_curs.execute(
-        "INSERT INTO matches(winner,loser) VALUES(%s,%s)",  (winner, loser,))
+    db, cursor = connect()
+
+    query = "INSERT INTO matches(winner,loser) VALUES(%s,%s);"
+    parameter = (winner, loser,)
+    cursor.execute(query, parameter)
+
     db.commit()
     db.close()
 
@@ -126,10 +147,13 @@ def getPlayerNameFromPlayers(player_id):
     Returns:
         name: the name of the player
     """
-    db = connect()
-    db_curs = db.cursor()
-    db_curs.execute("SELECT name FROM players WHERE id = (%s)", (player_id,))
-    name = db_curs.fetchone()
+    db, cursor = connect()
+
+    query = "SELECT name FROM players WHERE id = (%s);"
+    parameter = (player_id,)
+    cursor.execute(query, parameter)
+    name = cursor.fetchone()
+
     db.close()
     return name[0]
 
@@ -139,12 +163,14 @@ def getAllIdsFromPlayersInAList():
     Returns:
         id_list: return list ids of all players in the players table
     """
-    db = connect()
-    db_curs = db.cursor()
-    qry = "SELECT players.id FROM players"
-    db_curs.execute(qry)
-    results = db_curs.fetchall()
+    db, cursor = connect()
+
+    query = "SELECT players.id FROM players;"
+    cursor.execute(query)
+    results = cursor.fetchall()
+
     db.close()
+
     id_list = []
     for val in results:
         id_list.append(val[0])
@@ -157,11 +183,12 @@ def getAllIdsFromViewWinTotalInAList():
         id_list: return list ids of all winners using view
         based on players and matches tables
     """
-    db = connect()
-    db_curs = db.cursor()
-    qry = "SELECT * FROM view_win_total"
-    db_curs.execute(qry)
-    results = db_curs.fetchall()
+    db, cursor = connect()
+
+    query = "SELECT * FROM view_win_total;"
+    cursor.execute(query)
+    results = cursor.fetchall()
+
     db.close()
     id_list = []
     for val in results:
@@ -187,13 +214,13 @@ def playerStandings():
     if match_count == 0:
         # execute query to return id, name, winner set to 0
         # and total matches set to 0
-        db = connect()
-        db_curs = db.cursor()
-        qry = "SELECT players.id, name," \
-              " COALESCE(matches.winner,0), COALESCE(matches.loser,0)" \
-              " FROM players LEFT JOIN matches ON players.id = matches.id"
-        db_curs.execute(qry)
-        results = db_curs.fetchall()
+        db, cursor = connect()
+
+        query = "SELECT players.id, name," \
+            " COALESCE(matches.winner,0), COALESCE(matches.loser,0)" \
+            " FROM players LEFT JOIN matches ON players.id = matches.id;"
+        cursor.execute(query)
+        results = cursor.fetchall()
         db.close()
         if results:
             return results
@@ -203,12 +230,11 @@ def playerStandings():
         # execute query on view to return id, name and number of wins
         # also call functions to get total of wins and loses for a player
         all_winners = []
-        db = connect()
-        db_curs = db.cursor()
-        qry = "SELECT * FROM view_win_total"
-        db_curs.execute(qry)
-        results = db_curs.fetchall()
-        db_curs.close()
+        db, cursor = connect()
+
+        query = "SELECT * FROM view_win_total;"
+        cursor.execute(query)
+        results = cursor.fetchall()
         db.close()
         if results:
             for(row) in results:
@@ -218,10 +244,7 @@ def playerStandings():
                 lose_count = getLoserCount(player_id)
                 row_list.append(player_id)
                 row_list.append(row[1])
-                if win_count > 0:
-                    row_list.append(1)
-                else:
-                    row_list.append(0)
+                row_list.append(row[2])
                 row_list.append(win_count + lose_count)
                 all_winners.append(row_list)
             return all_winners
